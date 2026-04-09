@@ -1,0 +1,44 @@
+name: Rollback Deployment
+
+on:
+  workflow_dispatch:
+    inputs:
+      image_tag:
+        description: "Enter Docker Image Tag (commit SHA)"
+        required: true
+
+jobs:
+
+  rollback-dev:
+    runs-on: ubuntu-latest
+    environment: dev
+
+    steps:
+      - name: Rollback Dev
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.DEV_EC2_HOST }}
+          username: ${{ secrets.DEV_EC2_USER }}
+          key: ${{ secrets.DEV_EC2_SSH_KEY }}
+          script: |
+            docker pull ajay12332/my-app:${{ github.event.inputs.image_tag }}
+            docker stop my-app || true
+            docker rm my-app || true
+            docker run -d -p 5000:5000 --name my-app ajay12332/my-app:${{ github.event.inputs.image_tag }}
+
+  rollback-prod:
+    runs-on: ubuntu-latest
+    environment: prod
+
+    steps:
+      - name: Rollback Prod
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.PROD_EC2_HOST }}
+          username: ${{ secrets.PROD_EC2_USER }}
+          key: ${{ secrets.PROD_EC2_SSH_KEY }}
+          script: |
+            docker pull ajay12332/my-app:${{ github.event.inputs.image_tag }}
+            docker stop my-app || true
+            docker rm my-app || true
+            docker run -d -p 5000:5000 --name my-app ajay12332/my-app:${{ github.event.inputs.image_tag }}
